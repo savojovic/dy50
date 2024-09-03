@@ -1,5 +1,7 @@
 #include "dy50.h"
 
+static Packet createPacket(uint32_t sensorAddress, uint8_t type, uint8_t* content, uint8_t contentLength);
+
 /**
  * @brief  Construct a packet of raw data
  * @param  sensorAddress                     - Every sensor has an 4 byte address

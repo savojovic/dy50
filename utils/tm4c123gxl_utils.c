@@ -1,11 +1,40 @@
 #include "tm4c123gxl_utils.h"
 #include "config.h"
 
-uint32_t transmissionBytesCounter = 0;
-uint8_t recvPacket[300];
-uint16_t receivePacketLength;
+static uint32_t transmissionBytesCounter = 0;
+static uint8_t recvPacket[300];
+static uint16_t receivePacketLength;
+static bool isReceived;
+static Packet responsePacket; // Will be populated with received data in interrupt handler
 
-void getStructuredPacket()
+// Initialize system clock
+static void initSystemClock()
+{
+    SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_PLL |
+                   SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
+}
+
+static void configureUARTPrint(void)
+{
+    // Enable the GPIO Peripheral used by the UART.
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+
+    // Enable UART0
+    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+
+    // Configure GPIO Pins for UART mode.
+    MAP_GPIOPinConfigure(GPIO_PA0_U0RX);
+    MAP_GPIOPinConfigure(GPIO_PA1_U0TX);
+    MAP_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    // Use the internal 16MHz oscillator as the UART clock source.
+    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
+
+    // Initialize the UART for console I/O.
+    UARTStdioConfig(UART_PRINT_INTERFACE, UART_PRINT_BAUD, 16000000);
+}
+
+static void getStructuredPacket()
 {
     uint8_t* bytePointer = recvPacket;
     // Create a packet of raw bytes
@@ -143,38 +172,6 @@ void init()
     MAP_IntEnable(INT_UART_ASSIGNMENT);
     MAP_UARTIntEnable(UART_SENSOR_INTERFACE, UART_INT_RX | UART_INT_RT);
 }
-
-// Initialize system clock
-void initSystemClock()
-{
-    SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_PLL |
-                   SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
-}
-
-
-void configureUARTPrint(void)
-{
-    // Enable the GPIO Peripheral used by the UART.
-    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-
-    // Enable UART0
-    MAP_SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-
-    // Configure GPIO Pins for UART mode.
-    MAP_GPIOPinConfigure(GPIO_PA0_U0RX);
-    MAP_GPIOPinConfigure(GPIO_PA1_U0TX);
-    MAP_GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-
-    // Use the internal 16MHz oscillator as the UART clock source.
-    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
-
-    // Initialize the UART for console I/O.
-    UARTStdioConfig(UART_PRINT_INTERFACE, UART_PRINT_BAUD, 16000000);
-}
-
-
-
-
 
 void sendPacket(Packet *packet)
 {
